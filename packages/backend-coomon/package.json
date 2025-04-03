@@ -1,5 +1,5 @@
 {
-  "name": "@/backend-coomon",
+  "name": "@chess/backend-common",
   "version": "1.0.0",
   "main": "index.js",
   "exports": {

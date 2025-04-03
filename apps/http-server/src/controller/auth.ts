@@ -2,11 +2,13 @@ import { Request, Response } from 'express';
 import db from "@chess/db/client"
 import { sign } from 'jsonwebtoken';
 import { hash, compare } from 'bcrypt';
-import { JWT_SECRET } from '@/backend-coomon/config';
+import { JWT_SECRET } from "@chess/backend-common/config";
+
 
 
 export const signup = async (req:any, res:any)=> {
     try{
+        console.log("signup")
         const {email, password } = req.body;
 
         // Check if user already exists
@@ -30,7 +32,7 @@ export const signup = async (req:any, res:any)=> {
                 password: hashedPassword
             }
         })
-        return res.status(201);
+        return res.status(201).json({ message: "User created successfully", user });
 
     }catch(err){
         console.log(err)
@@ -62,10 +64,13 @@ export const login = async (req: any, res: any) => {
         }
 
         // Create token
-        const token = sign({ id: user.id }, JWT_SECRET, { expiresIn: '1h' });
+        const token = sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
         // Set cookie
-        res.cookie('chess_authentication_token', token);
+        res.cookie('chess_authentication_token', token, {
+            secure: false, // ❌ Localhost pe false rakhna zaroori hai!
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
 
         return res.status(200).json({ message: "Login successful", token });
 

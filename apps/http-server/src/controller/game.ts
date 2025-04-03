@@ -1,10 +1,14 @@
 import { Request, Response } from "express";
 import db from "@chess/db/client";
 
-export const createGame = async (req: Request, res: Response) => {
+export const createGame = async (req: any, res: any) => {
   try {
     const { color } = req.body;
     const userId = req.userId; 
+    
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     const whitePlayerId = color === "white" ? Number(userId) : null;
     const blackPlayerId = color === "black" ? Number(userId) : null;
 
