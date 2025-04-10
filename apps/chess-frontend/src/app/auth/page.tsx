@@ -5,8 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import axios from "axios";
-import { BASE_URL } from "../dashboard/page";
 import { useRouter } from "next/navigation";
+import { BASE_URL } from "@/lib/utils";
 
 export default function AuthForm() {
   const [isLogin, setIsLogin] = useState(false);
@@ -14,7 +14,7 @@ export default function AuthForm() {
   const [password, setPassword] = useState("");
   const router = useRouter();
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const res = await axios.post(
       `${BASE_URL}/auth/${isLogin ? "login" : "signup"}`,

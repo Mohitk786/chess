@@ -1,11 +1,11 @@
 "use client"
 
 import React, {useState} from 'react'
+import { BASE_URL } from '@/lib/utils';
 
-// export const BASE_URL = 'http://172.16.103.176:8000/api';
-export const BASE_URL="http:///51.20.79.155:8000/api"
 
-const page = () => {
+
+const Page = () => {
     const [color, setColor] = useState('white');
 
     const submitHandler = async () => {
@@ -44,4 +44,4 @@ const page = () => {
   )
 }
 
-export default page
+export default Page

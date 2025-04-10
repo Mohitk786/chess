@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import axios from "axios";
-import { BASE_URL } from "@/app/dashboard/page";
+import { BASE_URL } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
 export default function CreateGame() {
@@ -19,8 +19,12 @@ export default function CreateGame() {
     try {
       const response = await axios.post(`${BASE_URL}/game/create`, { color },{withCredentials: true});
       setGameId(response.data.id);
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to create game");
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.error || "Failed to create game");
+      } else {
+        setError("An unexpected error occurred");
+      }
     } finally {
       setLoading(false);
     }

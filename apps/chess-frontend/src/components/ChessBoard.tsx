@@ -1,35 +1,35 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Chess, Square } from "chess.js";
+import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { io, Socket } from "socket.io-client";
-import { Move, GameState } from "@/types/game";
+import { Move } from "@/types/game";
 import toast from "react-hot-toast";
+import { WS_URL } from "@/lib/utils";
 
 interface ChessBoardProps {
   gameId: number;
 }
 
-interface Move2 {
-  sourceSquare: string;
-  targetSquare: string;
+interface JoinGameResponse {
+  assigndColorToPlayer: "white" | "black";
+  fen: string;
+  error?: string;
 }
 
-interface IsPromotingParams {
+interface MoveResponse {
   fen: string;
-  move: Move2;
+  error?: string;
 }
 
 const ChessBoard: React.FC<ChessBoardProps> = ({ gameId }) => {
-  const [game, setGame] = useState(new Chess());
+  const [game] = useState(new Chess());
   const [boardFen, setBoardFen] = useState<string>();
   const socketRef = useRef<Socket | null>(null);
   const [playerColor, setPlayerColor] = useState<"white" | "black">("white");
 
-  //http://192.168.149.126:8000/api
-
   useEffect(() => {
-    const socket = io("ws://51.20.79.155:5000", {
+    const socket = io(WS_URL, {
       withCredentials: true,
       transports: ["websocket"],
     });
@@ -37,9 +37,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ gameId }) => {
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      console.log("Connected to WebSocket");
-
-      socket.emit("join_game_by_id", { gameId }, (data: any) => {
+      socket.emit("join_game_by_id", { gameId }, (data: JoinGameResponse) => {
         if (data?.error) {
           toast.error(data.error);
           return;
@@ -49,17 +47,17 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ gameId }) => {
       });
     });
 
-    socket.on("player_joined", (data) => {
+    socket.on("player_joined", () => {
       toast.success("Second Player joined the game");
     });
 
-    socket.on("error", (data) => {
+    socket.on("error", (data: { message?: string }) => {
       if (data?.message) {
-        return;
+        toast.error(data.message);
       }
     });
 
-    socket.on("opponent_move", (data) => {
+    socket.on("opponent_move", (data: { fen: string }) => {
       console.log("Opponent move received:", data);
       setBoardFen(data.fen);
     });
@@ -72,36 +70,26 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ gameId }) => {
       socket.disconnect();
       socket.off("opponent_move");
     };
-  }, []);
-
-  const promptUserForPromotionPiece = (): "q" | "r" | "b" | "n" => {
-    const choices = ["q", "r", "b", "n"];
-    let choice: string | null = null;
-
-    while (!choices.includes(choice as string)) {
-      choice = prompt(
-        "Promote to (q = Queen, r = Rook, b = Bishop, n = Knight):"
-      )?.toLowerCase() as string;
-    }
-
-    return choice as "q" | "r" | "b" | "n";
-  };
+  }, [gameId]);
 
   const onDrop = (sourceSquare: string, targetSquare: string): boolean => {
     const newGame = new Chess(boardFen || game.fen());
 
-    let validMove: any;
+    let validMove;
     try {
       validMove = newGame.move({
         from: sourceSquare,
         to: targetSquare,
       });
     } catch (err) {
-      toast.error("Invalid move!");
+      if (err instanceof Error) {
+        toast.error("Invalid move! " + err.message);
+      } else {
+        toast.error("Invalid move!");
+      }
       return false;
     }
 
-    // Ensure socket is connected before emitting
     if (!socketRef.current || !socketRef.current.connected) {
       console.log("Socket is not connected!");
       return false;
@@ -114,28 +102,26 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ gameId }) => {
       notation: validMove.san,
     };
 
-    socketRef.current.emit("move", { gameId, move }, (data: any) => {
+    socketRef.current.emit("move", { gameId, move }, (data: MoveResponse) => {
       if (data.error) {
+        toast.error(data.error);
         return;
       }
       console.log("Move successful:", data);
       setBoardFen(data.fen);
     });
 
-    const isCheckmate = newGame.isCheckmate();
-    if (isCheckmate) {
+    if (newGame.isCheckmate()) {
       alert("Checkmate! Game Over.");
       return false;
     }
 
-    const isStalemate = newGame.isStalemate();
-    if (isStalemate) {
+    if (newGame.isStalemate()) {
       alert("Stalemate! Game Over.");
       return false;
     }
 
-    const isInsufficientMaterial = newGame.isInsufficientMaterial();
-    if (isInsufficientMaterial) {
+    if (newGame.isInsufficientMaterial()) {
       alert("Insufficient material! Game Over.");
       return false;
     }
@@ -146,7 +132,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ gameId }) => {
   return (
     <div className="flex flex-col items-center justify-center h-screen w-full">
       <h2 className="text-lg font-semibold">Chess Game</h2>
-      <div className="">
+      <div>
         <Chessboard
           position={boardFen}
           onPieceDrop={onDrop}
