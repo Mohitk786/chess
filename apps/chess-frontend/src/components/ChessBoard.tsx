@@ -29,7 +29,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ gameId }) => {
   //http://192.168.149.126:8000/api
 
   useEffect(() => {
-    const socket = io("ws://192.168.149.126:5000", {
+    const socket = io("ws://51.20.79.155:5000", {
       withCredentials: true,
       transports: ["websocket"],
     });

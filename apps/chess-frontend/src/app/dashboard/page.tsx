@@ -1,7 +1,9 @@
+"use client"
+
 import React, {useState} from 'react'
 
 // export const BASE_URL = 'http://172.16.103.176:8000/api';
-export const BASE_URL="http://192.168.149.126:8000/api"
+export const BASE_URL="http:///51.20.79.155:8000/api"
 
 const page = () => {
     const [color, setColor] = useState('white');
