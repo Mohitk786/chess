@@ -1,6 +1,7 @@
 import React, {useState} from 'react'
 
-export const BASE_URL = 'http://localhost:8000/api';
+// export const BASE_URL = 'http://172.16.103.176:8000/api';
+export const BASE_URL="http://192.168.149.126:8000/api"
 
 const page = () => {
     const [color, setColor] = useState('white');
@@ -12,6 +13,7 @@ const page = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include',
                 body: JSON.stringify({color}),
             });
             if (!res.ok) {

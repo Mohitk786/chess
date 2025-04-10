@@ -1,10 +1,12 @@
 "use client";
 import { useState } from "react";
 import ChessBoard from "@/components/ChessBoard";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
   const [gameId, setGameId] = useState<number>(3);
   const [isGameStarted, setIsGameStarted] = useState<boolean>(false);
+  const router = useRouter();
 
   return (
     <div className="p-6 flex flex-col items-center">
@@ -24,8 +26,16 @@ export default function Home() {
             onClick={() => setIsGameStarted(true)}
             className="bg-blue-500 text-white px-4 py-2 rounded"
           >
-            Join Game
+            Join Game 2
           </button>
+
+          <button
+            onClick={() =>router.push("/create")}
+            className="bg-blue-500 text-white px-4 py-2 rounded"
+          >
+            Create
+          </button>
+          
         </div>
       ) : (
         <ChessBoard gameId={gameId} />

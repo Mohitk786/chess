@@ -32,7 +32,7 @@ model Game {
   blackId   Int?
   white     User?     @relation("WhitePlayer", fields: [whiteId], references: [id])
   black     User?    @relation("BlackPlayer", fields: [blackId], references: [id])
-  result    GameResult
+  result    GameResult @default(NOT_STARTED)
   fen       String
   moves     Move[]
   createdAt DateTime @default(now())
@@ -52,8 +52,10 @@ model Move {
 }
 
 enum GameResult {
-  WIN
-  LOSS
+  COMPLETED
   DRAW
   IN_PROGRESS
+  NOT_STARTED
+  WHITE_WON
+  BLACK_WON
 }

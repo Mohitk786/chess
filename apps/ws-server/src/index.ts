@@ -16,14 +16,50 @@ const io = new Server(5000, {
     credentials: true,
   },
 });
+
 const gameSockets: {
   [gameId: string]: { playerId: string; socketId: string }[];
 } = {};
 
+enum GameResult {
+  COMPLETED = "COMPLETED",
+  DRAW = "DRAW",
+  IN_PROGRESS = "IN_PROGRESS",
+  NOT_STARTED = "NOT_STARTED",
+  WHITE_WON = "WHITE_WON",
+  BLACK_WON = "BLACK_WON",
+}
+
+const checkGameStatus = async (gameId: number, chess: Chess) => {
+  if (!chess.isGameOver()) {
+    return;
+  }
+
+  let result: GameResult;
+
+  if (chess.isCheckmate()) {
+    const winner =
+      chess.turn() === "w" ? GameResult.BLACK_WON : GameResult.WHITE_WON;
+    result = winner;
+  } else if (chess.isDraw()) {
+    result = GameResult.DRAW;
+  } else {
+    result = GameResult.COMPLETED;
+  }
+
+  // Update the game result in the database
+  await db.game.update({
+    where: { id: gameId },
+    data: { result },
+  });
+
+  return result;
+};
+
 const assignColorToPlayer = async (
   game: any,
   playerId: string,
-  assigndColorToPlayer: "white"|"black"
+  assigndColorToPlayer: "white" | "black"
 ) => {
   if (game.whiteId === playerId || game.blackId === playerId) {
     assigndColorToPlayer = game.whiteId === playerId ? "white" : "black";
@@ -35,7 +71,7 @@ const assignColorToPlayer = async (
     } else if (!game.blackId) {
       game.blackId = playerId;
       assigndColorToPlayer = "black";
-    } 
+    }
   }
 
   await db.game.update({
@@ -47,19 +83,19 @@ const assignColorToPlayer = async (
 };
 
 io.on("connection", async (socket) => {
-
   const playerId = await authenticated(socket);
-  if(!playerId) {
+  if (!playerId) {
     console.log("Authentication failed");
-    return socket.emit("error", { message: "Authentication failed, Login Again" });
+    return socket.emit("error", {
+      message: "Authentication failed, Login Again",
+    });
   }
 
   socket.on("join_game_by_id", async (data, callback) => {
-    if(typeof data === "string") 
-      data = JSON.parse(data);
-      
-      console.log("Data received:", data);
-      const { gameId } = data;
+    if (typeof data === "string") data = JSON.parse(data);
+
+    console.log("Data received:", data);
+    const { gameId } = data;
 
     // gameSockets[gameId] = gameSockets[gameId] || [];
     // gameSockets[gameId].push({ playerId, socketId: socket.id });
@@ -74,14 +110,22 @@ io.on("connection", async (socket) => {
     if (!game) {
       return callback(socket.emit("error", { message: "Game not found!" }));
     }
-    
-    let assigndColorToPlayer:"white"|"black"  = "white";
-    assigndColorToPlayer = await assignColorToPlayer(game, playerId, assigndColorToPlayer);
 
-    if(game.whiteId && game.blackId) {
+    let assigndColorToPlayer: "white" | "black" = "white";
+    assigndColorToPlayer = await assignColorToPlayer(
+      game,
+      playerId,
+      assigndColorToPlayer
+    );
+
+    if (game.whiteId && game.blackId) {
       if (game.whiteId !== playerId && game.blackId !== playerId) {
-        return callback(socket.emit("error", { message: "Game already started! You can't enter" }));
-      }else{
+        return callback(
+          socket.emit("error", {
+            message: "Game already started! You can't enter",
+          })
+        );
+      } else {
         const fen = await redis.get(`game:${gameId}:fen`);
         if (!fen) {
           const chess = new Chess();
@@ -90,14 +134,17 @@ io.on("connection", async (socket) => {
         }
         socket.join(gameId);
         socket.to(gameId).emit("player_joined", { playerId, gameId });
-        return callback({ success: true, message: "Joined successfully", fen, assigndColorToPlayer });
+        return callback({
+          success: true,
+          message: "Joined successfully",
+          fen,
+          assigndColorToPlayer,
+        });
       }
     }
 
-
     let fen = await redis.get(`game:${gameId}:fen`);
     if (!fen) {
-      
       const chess = new Chess();
       //resume the game from the last position (agar game pause kar diya tha to)
       game.moves.forEach((m) => chess.move(m.notation));
@@ -106,8 +153,16 @@ io.on("connection", async (socket) => {
     }
 
     socket.join(gameId);
-    socket.to(gameId).emit("player_joined", { playerId, gameId, assigndColorToPlayer});
-    callback({ success: true, message: "Joined successfully", gameId, fen, assigndColorToPlayer });
+    socket
+      .to(gameId)
+      .emit("player_joined", { playerId, gameId, assigndColorToPlayer });
+    callback({
+      success: true,
+      message: "Joined successfully",
+      gameId,
+      fen,
+      assigndColorToPlayer,
+    });
   });
 
   socket.on("move", async (data, callback) => {
@@ -120,7 +175,7 @@ io.on("connection", async (socket) => {
       }
 
       const { gameId } = parsedData;
-      const {from, to, notation} = parsedData.move;
+      const { from, to, notation } = parsedData.move;
 
       // Fetch game details
       const game = await db.game.findUnique({
@@ -134,9 +189,11 @@ io.on("connection", async (socket) => {
 
       let fen = (await redis.get(`game:${gameId}:fen`)) || game.fen;
       if (!fen) {
-        return callback(socket.emit("error", {
-          message: "Game board state is not available",
-        }));
+        return callback(
+          socket.emit("error", {
+            message: "Game board state is not available",
+          })
+        );
       }
 
       const chess = new Chess(fen);
@@ -155,47 +212,50 @@ io.on("connection", async (socket) => {
 
       // Update FEN
       fen = chess.fen();
+      io.emit("opponent_move",  { from, to, notation, fen });
 
       // Store in DB & Redis
       await redis.set(`game:${gameId}:fen`, fen);
       const moveNumkey = `game:${gameId}:moveNum`;
       let moveNum = Number(await redis.get(moveNumkey));
+
       if (!moveNum) {
         const lastMove = await db.move.findFirst({
           where: { gameId },
           orderBy: { moveNum: "desc" },
           select: { moveNum: true },
         });
+
         moveNum = lastMove ? lastMove.moveNum : 0;
         await redis.set(moveNumkey, moveNum);
       }
 
 
-      await gameQueue.add(
+      //store game in DB through queue
+      gameQueue.add(
         "updateGame",
         { gameId, fen },
         { removeOnComplete: true }
-      )
+      );
 
       // Store move in queue
       moveNum = await redis.incr(moveNumkey);
-      await moveQueue.add(
+      moveQueue.add(
         "storeMove",
         { gameId, playerId, moveNum, notation },
         { removeOnComplete: true }
       );
 
-      // Notify opponent
-      callback(io.emit("opponent_move", { from, to, notation, fen }));
-
-      // Check if game is over
-      if (chess.isGameOver()) {
-        const result = chess.isCheckmate() ? "WIN" : "DRAW";
-        await db.game.update({ where: { id: gameId }, data: { result } });
-        io.emit("game_over", { result });
+      
+      const gameStatus = await checkGameStatus(gameId, chess);
+      if (gameStatus) {
+        io.to(gameId).to(gameId).emit("game_over", {
+          message: "Game Over",
+          result: gameStatus,
+        });
       }
+
     } catch (error: any) {
-      console.error("Error handling move:", error);
       socket.emit("error", { message: error.message });
     }
   });

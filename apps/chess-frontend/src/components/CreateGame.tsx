@@ -3,23 +3,21 @@
 import { useState } from "react";
 import axios from "axios";
 import { BASE_URL } from "@/app/dashboard/page";
+import { useRouter } from "next/navigation";
 
 export default function CreateGame() {
   const [gameId, setGameId] = useState<string | null>(null);
   const [color, setColor] = useState<string>("white");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const createGame = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await axios.post(`${BASE_URL}/game/create`, { color },{
-        headers: {
-          Authorization: `${localStorage.getItem("chess_platform_token")}`,
-        },
-      });
+      const response = await axios.post(`${BASE_URL}/game/create`, { color },{withCredentials: true});
       setGameId(response.data.id);
     } catch (err: any) {
       setError(err.response?.data?.error || "Failed to create game");
@@ -57,8 +55,15 @@ export default function CreateGame() {
           Game ID: <span className="font-bold">{gameId}</span>
         </div>
       )}
-
       {error && <div className="mt-4 text-red-400">{error}</div>}
+
+      <button
+        onClick={() => router.push("/")}
+        disabled={loading}
+        className="px-6 py-2 bg-blue-500 rounded-lg hover:bg-blue-600 transition disabled:bg-gray-700"
+      >
+        join
+      </button>
     </div>
   );
 }

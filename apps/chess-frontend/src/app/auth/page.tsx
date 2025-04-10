@@ -24,7 +24,7 @@ export default function AuthForm() {
     );
     const data = await res.data;
     if(isLogin){
-      localStorage.setItem("chess_platform_token", data?.token);
+      localStorage.setItem("chess_app_token", JSON.stringify(data?.token));
       router.push("/create");
       return;
     }
