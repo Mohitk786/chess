@@ -1,5 +1,0 @@
--- AlterTable
-ALTER TABLE "Game" ADD COLUMN     "wonById" INTEGER;
-
--- AddForeignKey
-ALTER TABLE "Game" ADD CONSTRAINT "Game_wonById_fkey" FOREIGN KEY ("wonById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
