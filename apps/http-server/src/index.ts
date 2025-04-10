@@ -9,7 +9,7 @@ import cors from 'cors';
 const app = express();
 app.use(cookieParser());
 app.use(cors({
-    origin: "*", 
+    origin: "http://51.20.79.155:3000", 
     credentials: true  
   }));
 
