@@ -1,4 +1,4 @@
-import { Server, Socket } from "socket.io";
+import { Server } from "socket.io";
 import Redis from "ioredis";
 import db from "@chess/db/client";
 import { Chess } from "chess.js";

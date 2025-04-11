@@ -67,10 +67,18 @@ export const login = async (req: any, res: any) => {
         const token = sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
         // Set cookie
+        // res.cookie('chess_authentication_token', token, {
+        //     secure: false, // ❌ Localhost pe false rakhna zaroori hai!
+        //     maxAge: 7 * 24 * 60 * 60 * 1000
+        // });
+
         res.cookie('chess_authentication_token', token, {
-            secure: false, // ❌ Localhost pe false rakhna zaroori hai!
+            secure: true,           
+            sameSite: 'None',       
+            httpOnly: true,         
             maxAge: 7 * 24 * 60 * 60 * 1000
-        });
+          });
+          
 
         return res.status(200).json({ message: "Login successful", token });
 

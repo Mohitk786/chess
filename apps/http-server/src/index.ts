@@ -9,7 +9,7 @@ import cors from 'cors';
 const app = express();
 app.use(cookieParser());
 app.use(cors({
-    origin: "http://51.20.79.155:3000", 
+    origin: ["http://chess.developermatch.me","http://localhost:3000"], 
     credentials: true  
   }));
 
